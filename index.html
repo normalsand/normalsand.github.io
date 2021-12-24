@@ -1,0 +1,48 @@
+<html>
+
+<head>
+</head>
+
+<body>
+
+<style>
+textarea {
+  resize: none;
+  font-family: Arial;
+  font-size: 0.85em;
+  width: 300px;
+  height: 50px;
+}
+</style>
+
+<p id = text>[Waiting for message]</p>
+<textarea id = 'box'></textarea>
+
+<script>
+const online = false
+const ip = ( online ? 'wss://normalsand-game-1.herokuapp.com' : 'ws://localhost:8001' );
+
+const ws = new WebSocket( ip );
+
+ws.addEventListener( 'open', () => {
+  console.log( `Connected to ${ ip }` );
+} );
+
+ws.addEventListener( 'message', msg => {
+  document.getElementById( 'text' ).innerHTML = msg.data;
+} )
+
+document.getElementById( 'box' ).addEventListener( 'keypress', function( e ) {
+  if ( e.key == "Enter" ) {
+    console.log( `Sent data "${ document.getElementById( 'box' ).value }" to server` );
+    ws.send( document.getElementById( 'box' ).value );
+    setTimeout( function() { document.getElementById( 'box' ).value = "" }, 1 );
+  }
+} );
+
+setInterval( function () { ws.send( 'ping' ); }, 100 );
+</script>
+
+</body>
+
+</html>

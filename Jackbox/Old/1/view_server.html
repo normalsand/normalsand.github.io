@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<head>
+  <title>server.json</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+</head>
+
+<body>
+
+<style>
+
+body {
+  background-color: #151515;
+}
+
+#main {
+  font-family: Consolas;
+  font-size: 0.8em;
+  color: white;
+}
+
+</style>
+
+<p id = main></p>
+
+<script>
+
+// Loads a file located on the server
+function loadFile( filePath ) {
+
+  var result = null;
+  var xmlhttp = new XMLHttpRequest();
+
+  // A t= is appended to the end to prevent it from being cached
+  // Which means the file will always update properly
+  xmlhttp.open( "GET", filePath + '?t=' + String( Date.now() ), false );
+  xmlhttp.send();
+  if ( xmlhttp.status == 200 ) {
+    result = xmlhttp.responseText;
+  }
+  return result;
+}
+
+// Constantly reloads file
+function reloadData() {
+
+  let text = loadFile( 'server.json' );
+  if ( text != document.getElementById( 'main' ).innerHTML )
+    document.getElementById( 'main' ).innerHTML = text;
+  setTimeout( reloadData, 500 );
+
+}
+
+setTimeout( reloadData, 500 );
+
+</script>
+
+</body>
+
+</html>

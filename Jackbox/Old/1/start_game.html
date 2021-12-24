@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<head>
+  <title>Start Game</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+</head>
+
+<body>
+
+<style>
+
+#password {
+  resize: none;
+  font-family: Arial;
+  font-size: 0.85em;
+}
+
+</style>
+
+<p>Input password:</p>
+<textarea id = password cols = 80></textarea><br><br>
+<button id = submit onclick = submit()>Submit!</button>
+
+<script>
+
+// Loads a file located on the server
+function loadFile( filePath ) {
+
+  var result = null;
+  var xmlhttp = new XMLHttpRequest();
+
+  // A t= is appended to the end to prevent it from being cached
+  // Which means the file will always update properly
+  xmlhttp.open( "GET", filePath + '?t=' + String( Date.now() ), false );
+  xmlhttp.send();
+  if ( xmlhttp.status == 200 ) {
+    result = xmlhttp.responseText;
+  }
+  return result;
+}
+
+// Updates the data in the server file
+function pushData( data, location, mode ) {
+
+  fetch( "write.php", {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      },
+      body: `data=${ data }&location=${ location }&mode=${ mode }`
+    } );
+
+}
+
+// Reads from the data in the server file
+function pullData( location ) {
+
+  let fileData = loadFile( 'server.json' );
+  let bufferStr = location.split( '.' );
+  let bufferObj = JSON.parse( fileData );
+
+  while ( location != '' && bufferStr.length > 0 ) {
+    bufferObj = bufferObj[ bufferStr[0] ];
+    bufferStr.splice( 0, 1 );
+  }
+
+  return bufferObj;
+
+}
+
+function submit() {
+  pushData( document.getElementById( 'password' ).value, '', 'activate' );
+}
+
+</script>
+
+</body>
+
+</html>

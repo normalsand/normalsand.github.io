@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Bakbak+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro&display=swap" rel="stylesheet"> 
+
+<head>
+  <title>Survive the Internet (Demo)</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+</head>
+
+<body>
+
+<style>
+
+body {
+  --gray_1: #606060;
+  --gray_2: #eaeaea;
+  background-color: white;
+}
+
+.center {
+  display: block;
+  margin: auto;
+}
+
+.text_1 {
+  font-family: 'Bakbak One';
+  font-size: 3em;
+  text-align: center;
+  margin: 0px;
+  color: black;
+}
+
+.box_1, .box_2 {
+  font-family: 'Source Sans Pro';
+  font-size: 1.4em;
+  text-align: center;
+  color: black;
+  border: 2px solid black;
+  background-color: white;
+  padding: 10px;
+  display: block;
+  margin: auto;
+  overflow: hidden;
+  resize: none;
+}
+
+.box_1 {
+  font-size: 1.9em;
+  width: 350px;
+  height: 40px;
+}
+
+.box_2 {
+  width: 600px;
+  height: 160px;
+}
+
+.box_1:focus, .box_2:focus {
+  background-color: var( --gray_2 );
+  outline: none;
+}
+
+.button_1 {
+  font-family: 'Bakbak One';
+  font-size: 1.4em;
+  text-align: center;
+  color: black;
+  border: 3px solid black;
+  background-color: white;
+  padding: 8px 20px;
+  display: block;
+  margin: auto;
+}
+
+.button_1:hover {
+  background-color: var( --gray_2 );
+}
+
+</style>
+
+<button onclick = 'pushData( "secretbup", "", "activate" )'>Activate</button>
+<button onclick = 'pushData( "", "", "reset" )'>Reset</button>
+<button onclick = 'advanceRoom()'>Advance room</button>
+<div id = room></div>
+
+<script>
+
+g_room = 0;
+g_name = null;
+
+// For window load
+function load() {
+
+  setInterval( update, 1000 );
+  switchRoom( 0 );
+
+}
+
+window.onload = load;
+
+// Runs once a second (for checking room switch)
+function update() {
+
+  mode = pullData( 'mode' );
+  if ( mode == 1 && g_room != 2 && g_room != 3 )
+    switchRoom( 2 );
+
+}
+
+// Replaces the current room HTML with that of a different room
+function switchRoom( index ) {
+
+  switch ( index ) {
+
+  case 0:
+
+    document.getElementById( 'room' ).innerHTML = `<html>
+    <p class = text_1 style = 'margin-top: 200px;'>Enter your name:</p>
+    <textarea class = box_1 id = box style = 'margin-top: 40px;'></textarea>
+    <button class = button_1 style = 'margin-top: 50px;' onclick = 'switchRoom( 1001 )'>JOIN</button>
+    </html>`;
+    addEnterListener( document.getElementById( 'box' ), function () {
+      switchRoom( 1 );
+    } );
+    break;
+
+  case 1:
+
+    g_name = document.getElementById( 'box' ).value;
+    pushData( `REAL|{"name": "${ g_name }", "color": "white", "score": 0}`, 'players', 'append' );
+    if ( pullData( 'leader' ) == '' ) {
+      pushData( g_name, 'leader', 'set' );
+      switchRoom( 1001 );
+      break;
+    }
+    document.getElementById( 'room' ).innerHTML = `<html>
+    <p class = text_1 style = 'margin-top: 300px;'>Waiting for players to join...</p>
+    </html>`;
+    break;
+
+  case 1001:
+
+    document.getElementById( 'room' ).innerHTML = `<html>
+    <p class = text_1 style = 'margin-top: 300px;'>Waiting for players to join...</p>
+    <button class = button_1 style = 'margin-top: 50px;' onclick = 'switchMode( 1 )'>START</button>
+    </html>`;
+    break;
+
+  case 2:
+
+    document.getElementById( 'room' ).innerHTML = `<html>
+    <p class = text_1 style = 'margin-top: 200px;'>[Question]</p>
+    <textarea class = box_2 id = box style = 'margin-top: 40px;'></textarea>
+    <button class = button_1 style = 'margin-top: 50px;' onclick = 'switchRoom( 3 )'>SUBMIT</button>
+    </html>`;
+    addEnterListener( document.getElementById( 'box' ), function () {
+      switchRoom( 3 );
+    } );
+    break;
+
+  case 3:
+
+    document.getElementById( 'room' ).innerHTML = `<html>
+    <p class = text_1 style = 'margin-top: 300px;'>Waiting for other players...</p>
+    </html>`;
+    break;
+
+  case 4:
+
+    document.getElementById( 'room' ).innerHTML = `<html>
+    <p class = text_1 style = 'margin-top: 200px;'>[Twist]</p>
+    <textarea class = box_2 id = box style = 'margin-top: 40px;'1></textarea>
+    <button class = button_1 style = 'margin-top: 50px;' onclick = 'switchRoom( 5 )'>SUBMIT</button>
+    </html>`;
+    addEnterListener( document.getElementById( 'box' ), function () {
+      switchRoom( 5 );
+    } );
+    break;
+
+  case 5:
+
+    document.getElementById( 'room' ).innerHTML = `<html>
+    <p class = text_1 style = 'margin-top: 300px;'>Waiting for other players...</p>
+    </html>`;
+    break;
+
+  }
+
+  g_room = index;
+
+}
+
+// Causes a switch on the server-side
+function switchMode( index ) {
+
+  switch ( index ) {
+
+  case 1:
+
+    break;
+
+  }
+
+  pushData( index, 'mode', 'set' )
+
+}
+
+// Quick way of debuggin
+function advanceRoom() {
+  switchRoom( g_room + 1 );
+}
+
+// Loads a file located on the server
+function loadFile( filePath, onLoad ) {
+
+  let request = new XMLHttpRequest();
+
+  // A t= is appended to the end to prevent it from being cached
+  // Which means the file will always update properly
+  request.open( "GET", filePath + '?t=' + String( Date.now() ), true );
+  request.onload = function ( e ) {
+
+    if ( request.readyState == 4 && request.status == 200 )
+      onLoad( request );
+    else if ( request.readyState == 4 )
+      console.error( 'XML requeset: Error 1!' );
+
+  }
+  request.onerror = function ( e ) { console.error( 'XML request: Error 2!' ) };
+  request.send();
+}
+
+// Updates the data in the server file
+function pushData( data, location, mode ) {
+
+  fetch( "write.php", {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      },
+      body: `data=${ data }&location=${ location }&mode=${ mode }`
+    } );
+
+}
+
+// Reads from the data in the server file
+function pullData( location ) {
+
+  return loadFile( 'server.json', function ( fileData ) {
+
+    let bufferStr = location.split( '.' );
+    let bufferObj = JSON.parse( fileData );
+
+    while ( location != '' && bufferStr.length > 0 ) {
+      bufferObj = bufferObj[ bufferStr[0] ];
+      bufferStr.splice( 0, 1 );
+    }
+
+    return bufferObj;
+
+  } );
+
+}
+
+// Adds a listener to the given element
+function addEnterListener( element, func ) {
+
+  element.addEventListener( 'keypress', function( e ) {
+    if ( e.key == "Enter" ) {
+      func();
+      e.preventDefault();
+      setTimeout( function() { element.value = "" }, 1 );
+    }
+  } );
+
+}
+
+</script>
+
+</body>
+
+</html>

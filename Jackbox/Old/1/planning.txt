@@ -1,0 +1,35 @@
+mode in server data that dictates what's going on
+
+game is activated by 
+
+-1 = game isn't active*
+0 = players queueing in
+1 = answering
+2 = twisting
+3 = viewing
+
+* No post requests are accepted unless a game is active
+(otherwise you could send a post request to change the game to being active)
+
+list of players that holds their data
+data includes
+- their name
+- their color
+- their score
+
+answer pool that holds the question:answer pair for everything throughout the game
+answer stack that's read from when players are viewing responses
+answers are attributed to a player via their name instead of by their index (name is static throughout the game)
+
+randomness is obviously dealt with on the server side
+
+--------------
+
+client-side will need some way of manipulating graphics
+it should allow you to sequence events in a timeline and then have them loaded automatically
+there will also be some sort of conditional tho that can back out of an event early
+
+pseudo-syntax:
+
+sync <function-to-execute: lambda> <condition: lambda>
+async <function-to-execute: lambda> <condition: lambda> <ms: int> <blocking: bool>

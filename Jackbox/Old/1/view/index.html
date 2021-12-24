@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Bakbak+One&display=swap" rel="stylesheet"> 
+
+<head>
+  <title>Survive the Internet (Demo)</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+</head>
+
+<body>
+
+<style>
+</style>
+
+<canvas id = canvas width = 1 height = 1></canvas> 
+
+<script>
+
+let g_room = null;
+let g_size = { x: 1900, y: 700 };
+
+// The following are all Room classes
+// Room classes have a constructor, update method, and draw method
+// They determine what's drawn to the canvas
+
+// Room where players are joining
+class Room_EnterName {
+
+  constructor() {
+    this.text = 'Test!';
+  }
+
+  update() {
+
+    
+
+  }
+
+  draw( canvas ) {
+
+    canvas.fillStyle = 'black';
+    canvas.font = "30px Bakbak One";
+    canvas.fillText( this.text, g_size.x / 2, g_size.y / 2 );
+
+  }
+}
+
+// For window load
+function load() {
+
+  setInterval( update, 1000 / 60 );
+  g_room = new Room_EnterName();
+
+  let canvasElement = document.getElementById( 'canvas' );
+  let canvas = canvasElement.getContext( '2d' );
+  canvas.canvas.width = g_size.x;
+  canvas.canvas.height = g_size.y;
+
+}
+
+window.onload = load;
+
+// Runs 60 times a second (for drawing to canvas)
+function update() {
+
+  let canvasElement = document.getElementById( 'canvas' );
+  let canvas = canvasElement.getContext( '2d' );
+
+  canvas.fillStyle = 'white';
+  canvas.fillRect( 0, 0, g_size.x, g_size.y );
+
+  if ( g_room ) {
+    g_room.update( canvas );
+    g_room.draw( canvas );
+  }
+}
+
+// Loads a file located on the server
+function loadFile( filePath ) {
+
+  let result = null;
+  let xmlhttp = new XMLHttpRequest();
+
+  // A t= is appended to the end to prevent it from being cached
+  // Which means the file will always update properly
+  xmlhttp.open( "GET", filePath + '?t=' + String( Date.now() ), false );
+  xmlhttp.send();
+  if ( xmlhttp.status == 200 ) {
+    result = xmlhttp.responseText;
+  }
+  return result;
+}
+
+// Updates the data in the server file
+function pushData( data, location, mode ) {
+
+  fetch( "write.php", {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      },
+      body: `data=${ data }&location=${ location }&mode=${ mode }`
+    } );
+
+}
+
+// Reads from the data in the server file
+function pullData( location ) {
+
+  let fileData = loadFile( 'server.json' );
+  let bufferStr = location.split( '.' );
+  let bufferObj = JSON.parse( fileData );
+
+  while ( location != '' && bufferStr.length > 0 ) {
+    bufferObj = bufferObj[ bufferStr[0] ];
+    bufferStr.splice( 0, 1 );
+  }
+
+  return bufferObj;
+
+}
+
+</script>
+
+</body>
+
+</html>
