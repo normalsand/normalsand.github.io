@@ -1,0 +1,46 @@
+<html>
+
+<head>
+</head>
+
+<body>
+
+<style>
+textarea {
+  resize: none;
+  font-family: Arial;
+  font-size: 0.85em;
+  width: 300px;
+  height: 50px;
+}
+</style>
+
+<button onclick = "pushData( 'JACK1|PUSH|' )">Test data</button>
+
+<script>
+const online = false
+const ip = ( online ? 'wss://normalsand-game-1.herokuapp.com' : 'ws://localhost:8001' );
+
+const ws = new WebSocket( ip );
+
+function pushData( data ) {
+
+  ws.send( `JACK1|PUSH|${ data }` );
+  console.log( `Sent data "${ data }" to server` );
+
+}
+
+ws.addEventListener( 'open', () => {
+  console.log( `Connected to ${ ip }` );
+} );
+
+ws.addEventListener( 'message', msg => {
+  
+} );
+
+setInterval( function () { ws.send( 'JACK1|PING' ); }, 100 );
+</script>
+
+</body>
+
+</html>
