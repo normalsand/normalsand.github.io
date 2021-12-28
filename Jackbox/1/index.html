@@ -1,44 +1,327 @@
+<!DOCTYPE html>
 <html>
 
+<link rel = icon href="http://normalsand.github.io/favicon.PNG">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Bakbak+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro&display=swap" rel="stylesheet"> 
+
 <head>
+  <title>Survive the Internet (Inputs)</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 </head>
 
 <body>
 
 <style>
-textarea {
-  resize: none;
-  font-family: Arial;
-  font-size: 0.85em;
-  width: 300px;
-  height: 50px;
+
+body {
+  --gray_1: #606060;
+  --gray_2: #eaeaea;
+  background-color: white;
 }
+
+.center {
+  display: block;
+  margin: auto;
+}
+
+.text_1 {
+  font-family: 'Arial Black';
+  font-size: 1.8em;
+  text-align: left;
+  margin: 0px;
+  color: black;
+}
+
+.box_1 {
+  font-family: 'Arial';
+  font-size: 1.2em;
+  text-align: center;
+  color: black;
+  border: 2px solid black;
+  background-color: white;
+  padding: 10px;
+  width: calc( var( --w ) - 20px );
+  display: block;
+  margin: auto;
+  overflow: hidden;
+  resize: none;
+}
+
+.box_1:focus {
+  background-color: var( --gray_2 );
+  outline: none;
+}
+
+.button_1 {
+  font-family: 'Arial';
+  font-size: 1.4em;
+  text-align: center;
+  color: black;
+  border: 3px solid black;
+  background-color: white;
+  padding: 8px 20px;
+  display: block;
+  margin: auto;
+}
+
+.button_1:hover {
+  background-color: var( --gray_2 );
+}
+
 </style>
 
-<button onclick = "pushData( 'JACK1|PUSH|' )">Test data</button>
+<button onclick = "send( 'activate secretbup' )">Activate</button>
+<button onclick = "send( 'reset secretbup' )">Reset</button>
+<button onclick = "advance_room()">Advance room</button>
+<div id = room></div>
 
+<script src = 'socket_stuff.js'></script>
 <script>
-const online = false
-const ip = ( online ? 'wss://normalsand-game-1.herokuapp.com' : 'ws://localhost:8001' );
 
-const ws = new WebSocket( ip );
+// Globals/window loading
+let g_room = 0;
+let g_name = null;
 
-function pushData( data ) {
+// For window load
+function load() {
 
-  ws.send( `JACK1|PUSH|${ data }` );
-  console.log( `Sent data "${ data }" to server` );
+  switch_room( 0 );
+  setInterval( () => send( 'mode query' ), 200 );
 
 }
 
-ws.addEventListener( 'open', () => {
-  console.log( `Connected to ${ ip }` );
-} );
+window.onload = load;
 
-ws.addEventListener( 'message', msg => {
-  
-} );
+// Commands are how the client and server communicate/run functions
+// Use the word to show that that word must be typed
+// Use * in front of a word to specify that it's an argument
+// Use i, f, etc. before a * to specify argument type (def. is string)
+const COMMANDS = setup_commands( [
+  'error *str',
+  'room goto i*index',
+  'room goto meta i*index *meta',
+  'mode check i*index'
+] );
 
-setInterval( function () { ws.send( 'JACK1|PING' ); }, 100 );
+const COMMAND_FUNCTIONS = [
+  server_error,
+  room_goto,
+  room_goto_meta,
+  mode_check
+];
+
+// Command functions
+
+function server_error( data )
+  { console.error( `Server error:\n${ data.str }` ); }
+
+function room_goto( data )
+  { switch_room( data.index ); }
+
+function room_goto_meta( data )
+  { switch_room( data.index, JSON.parse( data.meta ) ); }
+
+function mode_check( data ) {
+
+  if ( ( g_room == 1 || g_room == 1001 ) && data.index == 1 )
+    send( `question get ${ g_name }` ); // switch_room() is performed when the question callback occurs
+
+}
+
+// Replaces the current room HTML with that of a different room
+function switch_room( index, meta = {} ) {
+
+  index = parseInt( index );
+
+  switch ( index ) {
+
+  case 0:
+
+    construct_room( 'B->w500 p1->tEnter_your_name:->m200 t1->m10->s1.8->r1->F0 b1->tJOIN->m50->F0',
+      [ function () { console.log( 'a' ); g_name = document.getElementById( 'box' ).value; send( [ 'player', 'add', g_name ] ); } ] );
+    break;
+
+  case 1:
+
+    construct_room( 'p1->tWaiting for players to join...->m300' );
+    document.getElementById( 'room' ).innerHTML = `<html>
+    <p class = text_1 style = 'margin-top: 300px; text-align: center;'>Waiting for players to join...</p>
+    </html>`;
+    break;
+
+  case 1001:
+
+    construct_room( 'p1->tWaiting for players to join...->m300 b' );
+    document.getElementById( 'room' ).innerHTML = `<html>
+    <p class = text_1 style = 'margin-top: 300px; text-align: center;'>Waiting for players to join...</p>
+    <button class = button_1 style = 'margin-top: 50px;' onclick = 'send( "mode set 1" )'>START</button>
+    </html>`;
+    break;
+
+  case 2:
+
+    document.getElementById( 'room' ).innerHTML = `<html>
+    <div style = 'width: var( --w ); --w: 600px;' class = center>
+    <p class = text_1 style = 'margin-top: 200px;'>${ meta.question }</p>
+    <textarea class = box_1 id = box style = 'margin-top: 10px;'></textarea>
+    <button class = button_1 style = 'margin-top: 50px;' onclick = ''>SUBMIT</button>
+    <div></html>`;
+    add_enter_listener( document.getElementById( 'box' ), function () {
+      send( [ 'question', 'answer', g_name, document.getElementById( 'box' ).value ] );
+    } );
+    break;
+
+  case 3:
+
+    document.getElementById( 'room' ).innerHTML = `<html>
+    <p class = text_1 style = 'margin-top: 300px; text-align: center;'>Waiting for other players...</p>
+    </html>`;
+    break;
+
+  case 4:
+
+    document.getElementById( 'room' ).innerHTML = `<html>
+    <div style = 'width: var( --w ); --w: 600px;' class = center>
+    <p class = text_1 style = 'margin-top: 200px;'>[Twist]</p>
+    <textarea class = box_1 id = box style = 'margin-top: 10px;'1></textarea>
+    <button class = button_1 style = 'margin-top: 50px;' onclick = 'switch_room( 5 )'>SUBMIT</button>
+    <div></html>`;
+    add_enter_listener( document.getElementById( 'box' ), function () {
+      switch_room( 5 );
+    } );
+    break;
+
+  case 5:
+
+    document.getElementById( 'room' ).innerHTML = `<html>
+    <p class = text_1 style = 'margin-top: 300px; text-align: center;'>Waiting for other players...</p>
+    </html>`;
+    break;
+
+  }
+
+  g_room = index;
+
+}
+
+// Quick way of debugging
+function advance_room() {
+  switch_room( g_room + 1 );
+}
+
+// Constructs a room div based off of a space-efficient series of commands
+function construct_room( data, funcs = [] ) {
+
+  // Create room container
+  document.getElementById( 'room' ).innerHTML = // cont on next line
+    `<html><div id = room_container class = center style = 'width: var( --w ); --w: ${ window.innerWidth }px;'></div></html>`;
+
+  // Create easily-readable regex function
+  let get_arg = function( str, letter ) {
+
+    // Return first match or null depending on whether a match was found
+    let temp = str.match( RegExp( `(?<=.*->${ letter })[^-> ]*` ) );
+    if ( temp )
+      return temp[0];
+    return null;
+
+  };
+
+  // Each HTML element is an element in the data array
+  data = data.split( ' ' );
+  data.forEach( e => {
+
+    // Modify body
+    if ( e[0] == 'B' ) {
+
+      // Modify width if attribute is present
+      if ( get_arg( e, 'w' ) )
+        document.getElementById( 'room_container' ).style.setProperty( '--w', `${ get_arg( e, 'w' ) }px` );
+
+    }
+
+    // Create paragraph
+    else if ( e.substr( 0, 2 ) == 'p1' ) {
+
+      // Create object to store HTML arguments in
+      html_stuff = { inner: '', args: '', style: '' };
+
+      if ( get_arg( e, 't' ) ) // Body text
+        html_stuff.inner = get_arg( e, 't' ).replace( /_/g, ' ' );
+      if ( get_arg( e, 'm' ) ) // Top margin
+        html_stuff.style += `margin-top: ${ get_arg( e, 'm' ) }px; `;
+      if ( get_arg( e, 'a' ) ) // Text align
+        html_stuff.style += `text-align: ${ get_arg( e, 'a' ) }; `;
+
+      // Create paragraph element
+      document.getElementById( 'room_container' ).innerHTML += // cont on next line
+        `<html><p class = text_1 ${ html_stuff.args } style = '${ html_stuff.style }'>${ html_stuff.inner }</p></html>`;
+
+    }
+
+    // Create textarea
+    else if ( e.substr( 0, 2 ) == 't1' ) {
+
+      // Create object to store HTML arguments in
+      html_stuff = { args: '', style: '' };
+
+      if ( get_arg( e, 'm' ) ) // Top margin
+        html_stuff.style += `margin-top: ${ get_arg( e, 'm' ) }px; `;
+      if ( get_arg( e, 's' ) ) // Font size
+        html_stuff.style += `font-size: ${ get_arg( e, 's' ) }em; `;
+      if ( get_arg( e, 'r' ) ) // Rows
+        html_stuff.args += `rows = ${ get_arg( e, 'r' ) }`;
+
+      // Create textarea element
+      document.getElementById( 'room_container' ).innerHTML += // cont on next line
+        `<html><textarea class = box_1 id = box ${ html_stuff.args } style = '${ html_stuff.style }'></textarea></html>`;
+
+      // Assign function if necessary
+      if ( get_arg( e, 'F' ) )
+        document.getElementById( 'box' ).addEventListener( 'keypress', ev => {
+          if ( ev.key == "Enter" ) {
+            funcs[ get_arg( e, 'F' ) ]();
+            ev.preventDefault();
+            setTimeout( function() { ev.target.value = ""; }, 1 );
+          }
+        } );
+      
+    }
+
+    // Create button
+    else if ( e.substr( 0, 2 ) == 'b1' ) {
+
+      // Create object to store HTML arguments in
+      html_stuff = { inner: '', args: '', style: '' };
+
+      if ( get_arg( e, 't' ) ) // Body text
+        html_stuff.inner = get_arg( e, 't' ).replace( /_/g, ' ' );
+      if ( get_arg( e, 'm' ) ) // Top margin
+        html_stuff.style += `margin-top: ${ get_arg( e, 'm' ) }px; `;
+
+      // Create button element
+      document.getElementById( 'room_container' ).innerHTML += // cont on next line
+        `<html><button class = button_1 id = __temp_id ${ html_stuff.args } style = '${ html_stuff.style }'>JOIN</button></html>`;
+
+      // Assign function if necessary/reset temporary ID
+      if ( get_arg( e, 'F' ) )
+        document.getElementById( '__temp_id' ).onclick = funcs[ get_arg( e, 'F' ) ];
+      document.getElementById( '__temp_id' ).id = '';
+
+    }
+
+    else
+      console.error( `Element "${ e }" couldn't be created` );
+
+  } );
+
+}
+
 </script>
 
 </body>
