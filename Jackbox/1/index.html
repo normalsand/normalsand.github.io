@@ -142,65 +142,40 @@ function switch_room( index, meta = {} ) {
 
   case 0:
 
-    construct_room( 'B->w500 p1->tEnter_your_name:->m200 t1->m10->s1.8->r1->F0 b1->tJOIN->m50->F0',
-      [ function () { console.log( 'a' ); g_name = document.getElementById( 'box' ).value; send( [ 'player', 'add', g_name ] ); } ] );
+    construct_room( `B->w500 p1->tEnter_your_name:->m200 t1->m10->s1.8->r1->F~0 b1->tJOIN->m50->F~0`,
+      [ function () { g_name = document.getElementById( 'box' ).value; send( [ 'player', 'add', g_name ] ); } ] );
     break;
 
   case 1:
 
-    construct_room( 'p1->tWaiting for players to join...->m300' );
-    document.getElementById( 'room' ).innerHTML = `<html>
-    <p class = text_1 style = 'margin-top: 300px; text-align: center;'>Waiting for players to join...</p>
-    </html>`;
+    construct_room( `p1->tWaiting_for_players_to_join...->m300->acenter` );
     break;
 
   case 1001:
 
-    construct_room( 'p1->tWaiting for players to join...->m300 b' );
-    document.getElementById( 'room' ).innerHTML = `<html>
-    <p class = text_1 style = 'margin-top: 300px; text-align: center;'>Waiting for players to join...</p>
-    <button class = button_1 style = 'margin-top: 50px;' onclick = 'send( "mode set 1" )'>START</button>
-    </html>`;
+    construct_room( `p1->tWaiting_for_players_to_join...->m300->acenter b1->tSTART->m50->F_0`, [ () => send( 'mode set 1' ) ] );
     break;
 
   case 2:
-
-    document.getElementById( 'room' ).innerHTML = `<html>
-    <div style = 'width: var( --w ); --w: 600px;' class = center>
-    <p class = text_1 style = 'margin-top: 200px;'>${ meta.question }</p>
-    <textarea class = box_1 id = box style = 'margin-top: 10px;'></textarea>
-    <button class = button_1 style = 'margin-top: 50px;' onclick = ''>SUBMIT</button>
-    <div></html>`;
-    add_enter_listener( document.getElementById( 'box' ), function () {
-      send( [ 'question', 'answer', g_name, document.getElementById( 'box' ).value ] );
-    } );
+    
+    construct_room( `B->w600 p1->t${ meta.question.replace( / /g, '_' ) }->m200 t1->m10->F~0 b1->tSUBMIT->m50->F~0`,
+      [ () => send( [ 'question', 'answer', g_name, document.getElementById( 'box' ).value ] ) ] );
     break;
 
   case 3:
 
-    document.getElementById( 'room' ).innerHTML = `<html>
-    <p class = text_1 style = 'margin-top: 300px; text-align: center;'>Waiting for other players...</p>
-    </html>`;
+    construct_room( `p1->tWaiting_for_other_players...->m300->acenter` );
     break;
 
   case 4:
 
-    document.getElementById( 'room' ).innerHTML = `<html>
-    <div style = 'width: var( --w ); --w: 600px;' class = center>
-    <p class = text_1 style = 'margin-top: 200px;'>[Twist]</p>
-    <textarea class = box_1 id = box style = 'margin-top: 10px;'1></textarea>
-    <button class = button_1 style = 'margin-top: 50px;' onclick = 'switch_room( 5 )'>SUBMIT</button>
-    <div></html>`;
-    add_enter_listener( document.getElementById( 'box' ), function () {
-      switch_room( 5 );
-    } );
+    construct_room( `B->w600 p1->t[TWIST]...->200 b1->tSUBMIT->m50->F~0`,
+      [ () => send( [ 'question', 'answer', g_name, document.getElementById( 'box' ).value ] ) ] );
     break;
 
   case 5:
 
-    document.getElementById( 'room' ).innerHTML = `<html>
-    <p class = text_1 style = 'margin-top: 300px; text-align: center;'>Waiting for other players...</p>
-    </html>`;
+    construct_room( `p1->tWaiting_for_other_players...->m300->acenter` );
     break;
 
   }
@@ -282,15 +257,25 @@ function construct_room( data, funcs = [] ) {
         `<html><textarea class = box_1 id = box ${ html_stuff.args } style = '${ html_stuff.style }'></textarea></html>`;
 
       // Assign function if necessary
-      if ( get_arg( e, 'F' ) )
-        document.getElementById( 'box' ).addEventListener( 'keypress', ev => {
+      if ( get_arg( e, 'F' ) ) {
+
+        let event_function = ev => {
           if ( ev.key == "Enter" ) {
-            funcs[ get_arg( e, 'F' ) ]();
+
+            funcs[ get_arg( e, 'F' ).substring( 1 ) ]();
             ev.preventDefault();
-            setTimeout( function() { ev.target.value = ""; }, 1 );
+            if ( ev.target.reset_textbox )
+              setTimeout( function() { ev.target.value = ""; }, 1 );
+
           }
-        } );
-      
+        };
+
+        setTimeout( () => { 
+          document.getElementById( 'box' ).addEventListener( 'keypress', event_function );
+          document.getElementById( 'box' ).reset_textbox = ( get_arg( e, 'F' )[0] == '~' );
+        }, 20 );
+
+      }
     }
 
     // Create button
@@ -306,11 +291,21 @@ function construct_room( data, funcs = [] ) {
 
       // Create button element
       document.getElementById( 'room_container' ).innerHTML += // cont on next line
-        `<html><button class = button_1 id = __temp_id ${ html_stuff.args } style = '${ html_stuff.style }'>JOIN</button></html>`;
+        `<html><button class = button_1 id = __temp_id ${ html_stuff.args } style = '${ html_stuff.style }'>${ html_stuff.inner }</button></html>`;
 
       // Assign function if necessary/reset temporary ID
-      if ( get_arg( e, 'F' ) )
-        document.getElementById( '__temp_id' ).onclick = funcs[ get_arg( e, 'F' ) ];
+      if ( get_arg( e, 'F' ) ) {
+
+        document.getElementById( '__temp_id' ).onclick = function () {
+
+          funcs[ get_arg( e, 'F' ).substring( 1 ) ]();
+          if ( this.reset_textbox )
+            setTimeout( function() { let e = document.getElementById( 'box' ); if ( e ) e.value = ""; }, 1 );
+
+        };
+        document.getElementById( '__temp_id' ).reset_textbox = ( get_arg( e, 'F' )[0] == '~' );
+
+      }
       document.getElementById( '__temp_id' ).id = '';
 
     }
