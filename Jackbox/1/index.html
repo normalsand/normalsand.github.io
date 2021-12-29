@@ -35,6 +35,16 @@ body {
   text-align: left;
   margin: 0px;
   color: black;
+  white-space: pre-wrap;
+}
+
+.text_2 {
+  font-family: 'Arial';
+  font-size: 1.2em;
+  text-align: left;
+  margin: 0px;
+  color: #ccc;
+  white-space: pre-wrap;
 }
 
 .box_1 {
@@ -50,6 +60,7 @@ body {
   margin: auto;
   overflow: hidden;
   resize: none;
+  white-space: pre-wrap;
 }
 
 .box_1:focus {
@@ -67,6 +78,7 @@ body {
   padding: 8px 20px;
   display: block;
   margin: auto;
+  white-space: pre-wrap;
 }
 
 .button_1:hover {
@@ -91,7 +103,7 @@ let g_name = null;
 function load() {
 
   switch_room( 0 );
-  setInterval( () => send( 'mode query' ), 200 );
+  setInterval( () => { if ( g_room != 0 ) send( 'mode query' ) }, 200 );
 
 }
 
@@ -128,8 +140,10 @@ function room_goto_meta( data )
 
 function mode_check( data ) {
 
-  if ( ( g_room == 1 || g_room == 1001 ) && data.index == 1 )
-    send( `question get ${ g_name }` ); // switch_room() is performed when the question callback occurs
+  if ( ( g_room == 1 || g_room == 1000 ) && data.index == 1 )
+    send( [ 'question', 'get', g_name ] ); // switch_room() is performed when the question callback occurs
+  if ( ( g_room == 2 || g_room == 3 ) && data.index == 2 )
+    send( [ 'twist', 'get', g_name ] ); // switch_room() is performed when the question callback occurs
 
 }
 
@@ -142,8 +156,8 @@ function switch_room( index, meta = {} ) {
 
   case 0:
 
-    construct_room( `B->w500 p1->tEnter_your_name:->m200 t1->m10->s1.8->r1->F~0 b1->tJOIN->m50->F~0`,
-      [ function () { g_name = document.getElementById( 'box' ).value; send( [ 'player', 'add', g_name ] ); } ] );
+    construct_room( `B->w500 p1->tEnter_your_name:->m200 t1->m10->s1.8->r1->F~0 b1->tJOIN->m50->F~0`, [],
+      [ function () { g_name = document.querySelector( '.box_1' ).value; send( [ 'player', 'add', g_name ] ); } ] );
     break;
 
   case 1:
@@ -151,15 +165,15 @@ function switch_room( index, meta = {} ) {
     construct_room( `p1->tWaiting_for_players_to_join...->m300->acenter` );
     break;
 
-  case 1001:
+  case 1000:
 
-    construct_room( `p1->tWaiting_for_players_to_join...->m300->acenter b1->tSTART->m50->F_0`, [ () => send( 'mode set 1' ) ] );
+    construct_room( `p1->tWaiting_for_players_to_join...->m300->acenter b1->tSTART->m50->F_0`, [], [ () => send( 'mode set 1' ) ] );
     break;
 
   case 2:
     
-    construct_room( `B->w600 p1->t${ meta.question.replace( / /g, '_' ) }->m200 t1->m10->F~0 b1->tSUBMIT->m50->F~0`,
-      [ () => send( [ 'question', 'answer', g_name, document.getElementById( 'box' ).value ] ) ] );
+    construct_room( `B->w600 p1->T0->m200 t1->m10->F~0 b1->tSUBMIT->m50->F~0`, [ meta.question ],
+      [ () => send( [ 'question', 'answer', g_name, document.querySelector( '.box_1' ).value ] ) ] );
     break;
 
   case 3:
@@ -169,8 +183,10 @@ function switch_room( index, meta = {} ) {
 
   case 4:
 
-    construct_room( `B->w600 p1->t[TWIST]...->200 b1->tSUBMIT->m50->F~0`,
-      [ () => send( [ 'question', 'answer', g_name, document.getElementById( 'box' ).value ] ) ] );
+    let temp_str = 'The response above will be a comment on a news article. Come up with a title for the article, and type it in the box below.';
+    // TODO: The response above will be a comment on a news article. Provide a title for the news article below.
+    construct_room( `B->w600 p1->T0->m200 p2->T1->m5 t1->m15->F~0 b1->tSUBMIT->m50->F~0`,
+      [ `"${ meta.twist }"`, temp_str ], [ () => send( [ 'twist', 'answer', g_name, document.querySelector( '.box_1' ).value ] ) ] );
     break;
 
   case 5:
@@ -190,7 +206,7 @@ function advance_room() {
 }
 
 // Constructs a room div based off of a space-efficient series of commands
-function construct_room( data, funcs = [] ) {
+function construct_room( data, strs = [], funcs = [] ) {
 
   // Create room container
   document.getElementById( 'room' ).innerHTML = // cont on next line
@@ -223,38 +239,53 @@ function construct_room( data, funcs = [] ) {
     // Create paragraph
     else if ( e.substr( 0, 2 ) == 'p1' ) {
 
-      // Create object to store HTML arguments in
-      html_stuff = { inner: '', args: '', style: '' };
+      // Create element (w/ temp ID)
+      document.getElementById( 'room_container' ).innerHTML += `<html><p class = text_1 id = __temp></p></html>`;
 
       if ( get_arg( e, 't' ) ) // Body text
-        html_stuff.inner = get_arg( e, 't' ).replace( /_/g, ' ' );
+        document.getElementById( '__temp' ).innerText = get_arg( e, 't' ).replace( /_/g, ' ' );
+      if ( get_arg( e, 'T' ) ) // Literal body text
+        document.getElementById( '__temp' ).innerText = strs[ get_arg( e, 'T' ) ];
       if ( get_arg( e, 'm' ) ) // Top margin
-        html_stuff.style += `margin-top: ${ get_arg( e, 'm' ) }px; `;
+        document.getElementById( '__temp' ).style.marginTop = `${ get_arg( e, 'm' ) }px`;
       if ( get_arg( e, 'a' ) ) // Text align
-        html_stuff.style += `text-align: ${ get_arg( e, 'a' ) }; `;
+        document.getElementById( '__temp' ).style.textAlign = `${ get_arg( e, 'a' ) }`;
 
-      // Create paragraph element
-      document.getElementById( 'room_container' ).innerHTML += // cont on next line
-        `<html><p class = text_1 ${ html_stuff.args } style = '${ html_stuff.style }'>${ html_stuff.inner }</p></html>`;
+      document.getElementById( '__temp' ).id = '';
+
+    }
+
+    // Create small paragraph
+    else if ( e.substr( 0, 2 ) == 'p2' ) {
+
+      // Create element (w/ temp ID)
+      document.getElementById( 'room_container' ).innerHTML += `<html><p class = text_2 id = __temp></p></html>`;
+
+      if ( get_arg( e, 't' ) ) // Body text
+        document.getElementById( '__temp' ).innerText = get_arg( e, 't' ).replace( /_/g, ' ' );
+      if ( get_arg( e, 'T' ) ) // Literal body text
+        document.getElementById( '__temp' ).innerText = strs[ get_arg( e, 'T' ) ];
+      if ( get_arg( e, 'm' ) ) // Top margin
+        document.getElementById( '__temp' ).style.marginTop = `${ get_arg( e, 'm' ) }px`;
+      if ( get_arg( e, 'a' ) ) // Text align
+        document.getElementById( '__temp' ).style.textAlign = `${ get_arg( e, 'a' ) }`;
+
+      document.getElementById( '__temp' ).id = '';
 
     }
 
     // Create textarea
     else if ( e.substr( 0, 2 ) == 't1' ) {
 
-      // Create object to store HTML arguments in
-      html_stuff = { args: '', style: '' };
+      // Create element (w/ temp ID)
+      document.getElementById( 'room_container' ).innerHTML += `<html><textarea class = box_1 id = __temp></textarea></html>`;
 
       if ( get_arg( e, 'm' ) ) // Top margin
-        html_stuff.style += `margin-top: ${ get_arg( e, 'm' ) }px; `;
+        document.getElementById( '__temp' ).style.marginTop = `${ get_arg( e, 'm' ) }px`;
       if ( get_arg( e, 's' ) ) // Font size
-        html_stuff.style += `font-size: ${ get_arg( e, 's' ) }em; `;
+        document.getElementById( '__temp' ).style.fontSize = `${ get_arg( e, 's' ) }em`;
       if ( get_arg( e, 'r' ) ) // Rows
-        html_stuff.args += `rows = ${ get_arg( e, 'r' ) }`;
-
-      // Create textarea element
-      document.getElementById( 'room_container' ).innerHTML += // cont on next line
-        `<html><textarea class = box_1 id = box ${ html_stuff.args } style = '${ html_stuff.style }'></textarea></html>`;
+        document.getElementById( '__temp' ).rows = `${ get_arg( e, 'r' ) }`;
 
       // Assign function if necessary
       if ( get_arg( e, 'F' ) ) {
@@ -270,43 +301,47 @@ function construct_room( data, funcs = [] ) {
           }
         };
 
-        setTimeout( () => { 
-          document.getElementById( 'box' ).addEventListener( 'keypress', event_function );
-          document.getElementById( 'box' ).reset_textbox = ( get_arg( e, 'F' )[0] == '~' );
-        }, 20 );
+        setTimeout( function() {
+
+          document.querySelector( '.box_1' ).addEventListener( 'keypress', event_function );
+          document.querySelector( '.box_1' ).reset_textbox = ( get_arg( e, 'F' )[0] == '~' );
+
+        }, 200 );
 
       }
+
+      // Remove temp ID
+      document.getElementById( '__temp' ).id = '';
+
     }
 
     // Create button
     else if ( e.substr( 0, 2 ) == 'b1' ) {
 
-      // Create object to store HTML arguments in
-      html_stuff = { inner: '', args: '', style: '' };
+      // Create element (w/ temp ID)
+      document.getElementById( 'room_container' ).innerHTML += `<html><button class = button_1 id = __temp></button></html>`;
 
       if ( get_arg( e, 't' ) ) // Body text
-        html_stuff.inner = get_arg( e, 't' ).replace( /_/g, ' ' );
+        document.getElementById( '__temp' ).innerText = get_arg( e, 't' ).replace( /_/g, ' ' );
       if ( get_arg( e, 'm' ) ) // Top margin
-        html_stuff.style += `margin-top: ${ get_arg( e, 'm' ) }px; `;
+        document.getElementById( '__temp' ).style.marginTop = `${ get_arg( e, 'm' ) }px`;
 
       // Create button element
-      document.getElementById( 'room_container' ).innerHTML += // cont on next line
-        `<html><button class = button_1 id = __temp_id ${ html_stuff.args } style = '${ html_stuff.style }'>${ html_stuff.inner }</button></html>`;
 
       // Assign function if necessary/reset temporary ID
       if ( get_arg( e, 'F' ) ) {
 
-        document.getElementById( '__temp_id' ).onclick = function () {
+        document.getElementById( '__temp' ).onclick = function () {
 
           funcs[ get_arg( e, 'F' ).substring( 1 ) ]();
           if ( this.reset_textbox )
-            setTimeout( function() { let e = document.getElementById( 'box' ); if ( e ) e.value = ""; }, 1 );
+            setTimeout( function() { let e = document.querySelector( '.text_1' ); if ( e ) e.value = ""; }, 1 );
 
         };
-        document.getElementById( '__temp_id' ).reset_textbox = ( get_arg( e, 'F' )[0] == '~' );
+        document.getElementById( '__temp' ).reset_textbox = ( get_arg( e, 'F' )[0] == '~' );
 
       }
-      document.getElementById( '__temp_id' ).id = '';
+      document.getElementById( '__temp' ).id = '';
 
     }
 
