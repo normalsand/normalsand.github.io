@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+
+<link rel = icon href="http://normalsand.github.io/favicon.PNG">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Bakbak+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro&display=swap" rel="stylesheet"> 
+
+<head>
+  <title>MacroLink</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+</head>
+
+<body>
+
+<style>
+
+@font-face {
+  font-family: neufreit;
+  src: url(neufreit.otf);
+}
+
+@font-face {
+  font-family: c_consolas;
+  src: url(consolas.ttf);
+}
+
+:root {
+  --color_1: #aaaaaa;
+  --color_2: #aaaaaa;
+  --color_3: white;
+}
+
+body {
+  background-color: #151515;
+}
+
+.center {
+  display: block;
+  margin: auto;
+}
+
+textarea {
+  background-color: #cccccc;
+  padding: 5px;
+  border-style: solid;
+  border-color: #999999;
+  font-size: 1.4em;
+}
+
+textarea:focus {
+    background-color: #ffffff;
+    border-color: #aaaaaa;
+}
+
+#main_img {
+  image-rendering: pixelated;
+  margin-top: 40px;
+  border: 3px solid var( --color_1 );
+}
+
+#macrolink_icon {
+  margin-top: 80px;
+}
+
+#debug_text {
+    font-family: c_consolas;
+    color: white;
+    position: absolute;
+    top: 95%;
+    left: 50%;
+    transform: translate( -470px, -10px );
+    background-color: rgba( 0, 0, 0, 0.7 );
+    padding: 2px;
+}
+
+.clickable_text {
+  position: relative;
+  color: var( --color_2 );
+  font-family: 'Arial', sans-serif;
+  font-size: 16px;
+  font-weight: bold;
+  text-decoration: none;
+  padding: 0px 15px;
+  background-color: Transparent;
+  background-repeat: no-repeat;
+  border: none;
+  cursor: pointer;
+  outline: none;
+  z-index: 10;
+}
+
+</style>
+
+<div>
+  <p>
+    <button id = mode_0 class = clickable_text onclick = 'set_mode( 0 )'>Console</button>
+    <button id = mode_1 class = clickable_text onclick = 'set_mode( 1 )'>Keyboard</button>
+    <button id = mode_2 class = clickable_text onclick = 'set_mode( 2 )'>Cursor</button>
+    <button id = mode_3 class = clickable_text onclick = 'set_mode( 3 )'>Click</button>
+    <button id = mode_4 class = clickable_text onclick = 'set_mode( 4 )'>Drag</button>
+  </p>
+</div>
+
+<img id = macrolink_icon src = icon.png width = 600px class = center style = 'margin-top: 60px;'><br>
+<div style= 'position: relative;' onmousemove= 'show_coords( event )' >
+  <img id = main_img src = screen_password.png width = 960px height = 540px class = center >
+  <div id = debug_text>(?, ?)</div>
+</div>
+
+<textarea class = center type = text id = cmd_input rows = 5 cols = 50 autocomplete = off style = 'margin-top: 25px;'></textarea>
+
+<script src = '/socket_stuff.js'></script>
+<script>
+
+MODES = [ 'console', 'keyboard', 'move', 'click', 'drag' ]
+g_mode = 0
+g_debug_suffix = ''
+
+// The correct password must be inputted by the user via command 'use password <password>'
+g_password = 'none'
+
+// Globals
+// For window load
+function load() {
+
+  // Make the buttons at the top appear normal
+  set_mode( 0 );
+
+  // Allow a command to be submitted whenever the enter key is pressed
+  document.getElementById( 'cmd_input' ).addEventListener( 'keypress', e => {
+      if ( e.key == "Enter" ) {
+          submit_cmd();
+          document.getElementById( 'cmd_input' ).value = "";
+          e.preventDefault();
+      }
+  } );
+
+  // Continually reload the image
+  setInterval( () => { if ( g_password != 'none' )
+    send( `link ${ g_password } image fetch` ); }, 150 )
+
+}
+
+window.onload = load;
+
+// Commands are how the client and server communicate/run functions
+// Use the word to show that that word must be typed
+// Use * in front of a word to specify that it's an argument
+// Use i, f, etc. before a * to specify argument type (def. is string)
+const COMMANDS = setup_commands( [
+  'log *str',
+  'error *str',
+  'image set *image_data'
+] );
+
+const COMMAND_FUNCTIONS = [
+  log_info,
+  server_error,
+  image_set
+];
+
+// Command functions
+
+function log_info( data )
+  { console.log( `[SERVER] ${ data.str }` ); }
+
+function server_error( data )
+  { console.error( `Server error:\n${ data.str }` ); }
+
+// Mode determines what should be visible and how click actions affect the image
+function set_mode( index ) {
+
+  g_mode = index;
+
+  // Change button colors based off of selected mode
+  let doc_style = getComputedStyle( document.body );
+  let color_deselected = doc_style.getPropertyValue( '--color_2' );
+  let color_selected = doc_style.getPropertyValue( '--color_3' );
+
+  for ( let i = 0; i < MODES.length; i ++ )
+    document.getElementById( `mode_${i}` ).style.color = ( g_mode == i ? color_selected : color_deselected );
+
+  // The text box is visible unless mode is keyboard
+  document.getElementById( 'cmd_input' ).style.display = ( MODES[ g_mode ] == 'keyboard' ) ? 'none' : 'inherit';
+
+}
+
+// Parses a command to either affect the webpage or be sent over the socket
+function submit_cmd() {
+
+    let cmd = document.getElementById( 'cmd_input' ).value;
+    document.getElementById( 'cmd_input' ).value = '';
+
+    if ( cmd.substring( 0, 13 ) == 'use password ' )
+      g_password = cmd.substring( 13 )
+    
+    else
+      send_cmd( cmd );
+
+}
+
+// Actually sends a command over the socket
+function send_cmd( cmd_body ) {
+
+  send( [ 'link', g_password, 'command', 'push', cmd_body ] )
+}
+
+// Update the image using a byte string
+function image_set( data ) {
+
+  // Convert data.image_data from string to bytearray
+  // Requires taking it out of the b''
+  if ( data.image_data != '' ) {
+    data.image_data = data.image_data.substring( 2, data.image_data.length - 1 );
+    document.getElementById( 'main_img' ).src = 'data:image/png;base64,' + data.image_data;
+  }
+
+  // Show a special image if there's no data in the buffer
+  else
+    document.getElementById( 'main_img' ).src = 'screen_inactive.png';
+
+}
+
+// Update the coordinates displayed in the bottom left
+function show_coords( event ) {
+    var rect = document.getElementById( 'main_img' ).getBoundingClientRect();
+    
+    x = Math.floor( ( event.clientX - rect.left ) * 2 );
+    y = Math.floor( ( event.clientY - rect.top ) * 2 );
+    
+    update_debug_text();
+}
+
+// Checks whether debug text is valid and updates the div
+function update_debug_text() {
+    document.getElementById( 'debug_text' ).innerHTML = `(${x}, ${y})` + g_debug_suffix;
+    
+    if ( x < 0 || y < 0 || x > 1920 || y > 1080 )
+        document.getElementById( 'debug_text' ).innerHTML = '(?, ?)' + g_debug_suffix;
+}
+
+</script>
+
+</body>
+
+</html>

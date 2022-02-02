@@ -61,7 +61,7 @@ function send( data ) {
     data.forEach( s => { output += s.replace( / /g, '- ' ).replace( /-/g, '--' ) + ' '; } );
     output = output.slice( 0, -1 ); // Remove trailing space
 
-    ws.send( 'jack1 ' + output );
+    ws.send( output );
   }
 
   else if ( typeof data === 'string' || data instanceof String ) {
@@ -69,7 +69,7 @@ function send( data ) {
     // Simply pass the same string to the server
     let output = data;
 
-    ws.send( 'jack1 ' + output );
+    ws.send( output );
 
   }
 

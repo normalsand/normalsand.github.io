@@ -92,10 +92,10 @@ body {
 <button onclick = "advance_room()">Advance room</button>
 <div id = room></div>
 
-<script src = 'socket_stuff.js'></script>
+<script src = 'https://normalsand.github.io/socket_stuff.js'></script>
 <script>
 
-// Globals/window loading
+// Globals
 let g_room = 0;
 let g_name = null;
 
@@ -114,6 +114,7 @@ window.onload = load;
 // Use * in front of a word to specify that it's an argument
 // Use i, f, etc. before a * to specify argument type (def. is string)
 const COMMANDS = setup_commands( [
+  'log *str',
   'error *str',
   'room goto i*index',
   'room goto meta i*index *meta',
@@ -121,6 +122,7 @@ const COMMANDS = setup_commands( [
 ] );
 
 const COMMAND_FUNCTIONS = [
+  log_info,
   server_error,
   room_goto,
   room_goto_meta,
@@ -128,6 +130,9 @@ const COMMAND_FUNCTIONS = [
 ];
 
 // Command functions
+
+function log_info( data )
+  { console.log( `[SERVER] ${ data.str }` ); }
 
 function server_error( data )
   { console.error( `Server error:\n${ data.str }` ); }
@@ -144,6 +149,8 @@ function mode_check( data ) {
     send( [ 'question', 'get', g_name ] ); // switch_room() is performed when the question callback occurs
   if ( ( g_room == 2 || g_room == 3 ) && data.index == 2 )
     send( [ 'twist', 'get', g_name ] ); // switch_room() is performed when the question callback occurs
+  if ( ( g_room == 4 || g_room == 5 ) && data.index == 3 )
+    switch_room( 6 );
 
 }
 
@@ -154,33 +161,39 @@ function switch_room( index, meta = {} ) {
 
   switch ( index ) {
 
+  // Join screen
   case 0:
 
     construct_room( `B->w500 p1->tEnter_your_name:->m200 t1->m10->s1.8->r1->F~0 b1->tJOIN->m50->F~0`, [],
       [ function () { g_name = document.querySelector( '.box_1' ).value; send( [ 'player', 'add', g_name ] ); } ] );
     break;
 
+  // Waiting for other players to join
   case 1:
 
     construct_room( `p1->tWaiting_for_players_to_join...->m300->acenter` );
     break;
 
+  // Waiting for other players to join (as room leader)
   case 1000:
 
     construct_room( `p1->tWaiting_for_players_to_join...->m300->acenter b1->tSTART->m50->F_0`, [], [ () => send( 'mode set 1' ) ] );
     break;
 
+  // Providing answer
   case 2:
     
     construct_room( `B->w600 p1->T0->m200 t1->m10->F~0 b1->tSUBMIT->m50->F~0`, [ meta.question ],
       [ () => send( [ 'question', 'answer', g_name, document.querySelector( '.box_1' ).value ] ) ] );
     break;
 
+  // Waiting
   case 3:
 
     construct_room( `p1->tWaiting_for_other_players...->m300->acenter` );
     break;
 
+  // Providing twist
   case 4:
 
     let temp_str = 'The response above will be a comment on a news article. Come up with a title for the article, and type it in the box below.';
@@ -189,9 +202,16 @@ function switch_room( index, meta = {} ) {
       [ `"${ meta.twist }"`, temp_str ], [ () => send( [ 'twist', 'answer', g_name, document.querySelector( '.box_1' ).value ] ) ] );
     break;
 
+  // Waiting
   case 5:
 
     construct_room( `p1->tWaiting_for_other_players...->m300->acenter` );
+    break;
+
+  // Response is playing on view mode
+  case 6:
+
+    construct_room( `p1->tAnswers_are_being_revealed!->m300->acenter` );
     break;
 
   }

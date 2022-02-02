@@ -22,15 +22,60 @@ html, body {
   width:  100%;
   height: 100%;
   margin: 0;
+  overflow: hidden;
 }
 
 </style>
 
 <canvas id = canvas></canvas>
 
-<script src = 'socket_stuff.js'></script>
+<script src = '/../socket_stuff.js'></script>
 <script>
-setInterval( draw, 100 );
+
+// Globals
+let g_state = {};
+
+// For window load
+function load() {
+
+  setInterval( draw, 1000 / 60 );
+  setInterval( () => { send( 'draw_data query {}' ) }, 200 );
+
+}
+
+window.onload = load;
+
+// Commands are how the client and server communicate/run functions
+// Use the word to show that that word must be typed
+// Use * in front of a word to specify that it's an argument
+// Use i, f, etc. before a * to specify argument type (def. is string)
+const COMMANDS = setup_commands( [
+  'log *str',
+  'error *str',
+  'draw_data update *data'
+] );
+
+const COMMAND_FUNCTIONS = [
+  log_info,
+  server_error,
+  draw_data_update
+];
+
+// Command functions
+
+function log_info( data )
+  { console.log( `[SERVER] ${ data.str }` ); }
+
+function server_error( data )
+  { console.error( `Server error:\n${ data.str }` ); }
+
+function draw_data_update( data ) {
+
+  // Just print the into to the console for now
+  console.log( data.data );
+  g_state = JSON.parse( data.data );
+
+}
 
 // Draw an image at coordinates
 function drawImage( ctx, src, x, y ) {
@@ -58,9 +103,18 @@ function draw() {
   // Draw background image
   drawImage( ctx, '/../xp_bg.png', 0, 0 );
 
-  ctx.moveTo( 0, 0 );
-  ctx.lineTo( window.innerWidth, window.innerHeight );
-  ctx.stroke();
+  // Draw text
+  ctx.font = "30px Arial";
+
+  if ( g_state.mode == 1 || g_state.mode == 2 )
+    ctx.fillText( g_state.timer, ctx.canvas.width / 2, ctx.canvas.height / 2 );
+
+  else if ( g_state.mode == 3 ) {
+
+    ctx.fillText( g_state.view.response, ctx.canvas.width / 2, ctx.canvas.height / 2 - 40 );
+    ctx.fillText( g_state.view.twist, ctx.canvas.width / 2, ctx.canvas.height / 2 + 40 );
+
+  }
 }
 
 </script>
