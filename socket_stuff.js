@@ -1,6 +1,6 @@
 // Changing the 'online' variable switches between using a localhost
 // or using the online web server
-const online = false
+const online = true
 const ip = ( online ? 'wss://normalsand-game-1.herokuapp.com' : 'ws://localhost:8001' );
 
 // More strict version of parseInt() (kinda stolen from mozilla web docs)
