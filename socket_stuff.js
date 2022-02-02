@@ -16,11 +16,10 @@ function log( str )
   { console.error( str ); }
 
 // Main websocket
-alert( 'a' )
 const ws = new WebSocket( ip );
 
 ws.addEventListener( 'open', () => {
-  alert( `Connected to ${ ip }` );
+  console.log( `Connected to ${ ip }` );
 } );
 
 // Called every time the server sends something back
