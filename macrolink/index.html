@@ -32,6 +32,10 @@
   --color_1: #aaaaaa;
   --color_2: #aaaaaa;
   --color_3: white;
+  --color_4A: #cccccc;
+  --color_4B: #999999;
+  --color_5A: #ffffff;
+  --color_5B: #aaaaaa;
 }
 
 body {
@@ -44,16 +48,16 @@ body {
 }
 
 textarea {
-  background-color: #cccccc;
+  background-color: var( --color_4A );
   padding: 5px;
   border-style: solid;
-  border-color: #999999;
+  border-color: var( --color_4B );
   font-size: 1.4em;
 }
 
 textarea:focus {
-    background-color: #ffffff;
-    border-color: #aaaaaa;
+  background-color: var( --color_5A );
+  border-color: var( --color_5B );
 }
 
 #main_img {
@@ -93,7 +97,29 @@ textarea:focus {
   z-index: 10;
 }
 
+#keyboard {
+  width: 55%;
+}
+
+.keyboard_row {
+  display: flex;
+  height: 40px;
+}
+
+.keyboard_key {
+  background-color: var( --color_4A );
+  border: 2px solid var( --color_4B );
+  text-align: center;
+  vertical-align: middle;
+  margin: 4px;
+  padding-top: 5px;
+  font-family: neufreit;
+  user-select: none;
+}
+
 </style>
+
+<script>function show_coords() {} // Prevent errors from unloading</script>
 
 <div>
   <p>
@@ -106,19 +132,25 @@ textarea:focus {
 </div>
 
 <img id = macrolink_icon src = icon.png width = 600px class = center style = 'margin-top: 60px;'><br>
-<div style= 'position: relative;' onmousemove= 'show_coords( event )' >
+<div style= 'position: relative;' onmousemove = 'show_coords( event )' >
   <img id = main_img src = screen_password.png width = 960px height = 540px class = center >
   <div id = debug_text>(?, ?)</div>
 </div>
 
 <textarea class = center type = text id = cmd_input rows = 5 cols = 50 autocomplete = off style = 'margin-top: 25px;'></textarea>
+<div id = keyboard class = center style = 'margin-top: 25px'></div>
 
 <script src = '/socket_stuff.js'></script>
 <script>
 
-MODES = [ 'console', 'keyboard', 'move', 'click', 'drag' ]
+MODES = [ 'console', 'keyboard', 'cursor', 'click', 'drag' ]
 g_mode = 0
 g_debug_suffix = ''
+
+// Used for debug coords & click functions
+g_x = 0
+g_y = 0
+g_drag_from = [ -1, -1 ]
 
 // The correct password must be inputted by the user via command 'use password <password>'
 g_password = 'none'
@@ -143,9 +175,46 @@ function load() {
   setInterval( () => { if ( g_password != 'none' )
     send( `link ${ g_password } image fetch` ); }, 150 )
 
+  // Allow the image to send a command when clicked on
+  // This only applies when in 'cursor', 'click', or 'drag' mode
+  document.getElementById( 'main_img' ).onclick = function() {
+      
+      // Set the cursor to a specific position
+      if ( MODES[ g_mode ] == 'cursor' ) {
+        console.log( 'a' );
+        send_cmd( `cs ${g_x} ${g_y}` );
+      }
+      
+      // Click on a position
+      else if ( MODES[ g_mode ] == 'click' )
+          send_cmd( `cs ${g_x} ${g_y} ,, s 200 ,, c1` );
+          
+      // Click on a position A, move to position B, and release
+      else if ( MODES[ g_mode ] == 'drag' ) {
+          if ( g_drag_from[0] == -1 && g_drag_from[1] == -1 ) {
+              g_drag_from[0] = g_x;
+              g_drag_from[1] = g_y;
+          }
+          else {
+              send_cmd( `d ${g_drag_from[0]} ${g_drag_from[1]} ${g_x} ${g_y}` );
+              g_drag_from[0] = -1;
+              g_drag_from[1] = -1;
+          }
+      }
+  }
+
+  // Create the keyboard
+  // (can't do it with raw HTML because it's too complicated)
+  create_keyboard()
+
 }
 
 window.onload = load;
+
+// Gets a css variable (must include -- in name)
+function css_var( var_name ) {
+  return getComputedStyle( document.body ).getPropertyValue( var_name )
+}
 
 // Commands are how the client and server communicate/run functions
 // Use the word to show that that word must be typed
@@ -186,6 +255,9 @@ function set_mode( index ) {
 
   // The text box is visible unless mode is keyboard
   document.getElementById( 'cmd_input' ).style.display = ( MODES[ g_mode ] == 'keyboard' ) ? 'none' : 'inherit';
+
+  // The keyboard in visible only when mode is keyboard
+  document.getElementById( 'keyboard' ).style.display = ( MODES[ g_mode ] == 'keyboard' ) ? 'inherit' : 'none';
 
 }
 
@@ -229,18 +301,92 @@ function image_set( data ) {
 function show_coords( event ) {
     var rect = document.getElementById( 'main_img' ).getBoundingClientRect();
     
-    x = Math.floor( ( event.clientX - rect.left ) * 2 );
-    y = Math.floor( ( event.clientY - rect.top ) * 2 );
+    g_x = Math.floor( ( event.clientX - rect.left ) * 2 );
+    g_y = Math.floor( ( event.clientY - rect.top ) * 2 );
     
     update_debug_text();
 }
 
 // Checks whether debug text is valid and updates the div
 function update_debug_text() {
-    document.getElementById( 'debug_text' ).innerHTML = `(${x}, ${y})` + g_debug_suffix;
+    document.getElementById( 'debug_text' ).innerHTML = `(${g_x}, ${g_y})` + g_debug_suffix;
     
-    if ( x < 0 || y < 0 || x > 1920 || y > 1080 )
+    if ( g_x < 0 || g_y < 0 || g_x > 1920 || g_y > 1080 )
         document.getElementById( 'debug_text' ).innerHTML = '(?, ?)' + g_debug_suffix;
+}
+
+// Creates the keyboard
+function create_keyboard() {
+
+  const ROWS = [
+    '1` 11 12 13 14 15 16 17 18 19 10 1- 1= 2BACK',
+    '2TAB 1q 1w 1e 1r 1t 1y 1u 1i 1o 1p 1[ 1] 1\\',
+    '2CAPS 1a 1s 1d 1f 1g 1h 1j 1k 1l 1; 1\' 3ENTER',
+    '2SHIFT 1z 1x 1c 1v 1b 1n 1m 1, 1. 1/ 2RSHIFT',
+    '2CTRL 1WIN 1ALT 6SPACE 2RALT 2RCTRL'
+  ];
+
+  const KEY_CODES = {
+    'BACK': '<',
+    'TAB': '>',
+    ',': 'cm',
+    'x': '-x',
+    'v': '-v',
+    'CAPS': '-capslock',
+    'ENTER': 'v',
+    'SHIFT': '+',
+    'CTRL': '^',
+    'WIN': '#',
+    'ALT': '!',
+    'SPACE': '-space',
+    'RSHIFT': '-shiftright',
+    'RALT': '-altright',
+    'RCTRL': '-ctrlright'
+  };
+
+  ROWS.forEach( row => {
+
+    let row_element = document.createElement( 'div' );
+    row_element.setAttribute( 'class', 'keyboard_row' );
+
+    row.split( ' ' ).forEach( key => {
+
+      let element = document.createElement( 'div' );
+      element.innerHTML = key.substring( 1 );
+      element.setAttribute( 'class', 'keyboard_key' );
+      element.style.flex = key[0];
+
+      if ( key.substring( 1 ) in KEY_CODES )
+        var key_code = KEY_CODES[ key.substring( 1 ) ];
+      else
+        var key_code = key.substring( 1 );
+
+      element.onmousedown = e => {
+
+        e.target.style.backgroundColor = css_var( '--color_5A' );
+        e.target.style.borderColor = css_var( '--color_5B' );
+
+        send_cmd( `kd ${ key_code }` );
+
+      };
+
+      element.onmouseup = e => {
+
+        e.target.style.backgroundColor = css_var( '--color_4A' );
+        e.target.style.borderColor = css_var( '--color_4B' );
+
+        send_cmd( `ku ${ key_code }` );
+
+      };
+
+      row_element.appendChild( element );
+
+    } );
+
+    document.getElementById( 'keyboard' ).appendChild( row_element );
+
+  } );
+
 }
 
 </script>
