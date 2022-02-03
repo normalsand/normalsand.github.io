@@ -1,0 +1,13 @@
+<script>
+
+const ws = new WebSocket( 'ws://localhost:8001' );
+
+ws.addEventListener( 'open', () => {
+  alert( `Connected to socket` );
+} );
+
+ws.addEventListener( 'close', e => {
+  alert( `Closed: ${ e.reason }` );
+} );
+
+</script>

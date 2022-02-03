@@ -1,6 +1,6 @@
 // Changing the 'online' variable switches between using a localhost
 // or using the online web server
-const online = false
+const online = true
 const ip = ( online ? 'wss://normalsand-game-1.herokuapp.com' : 'ws://localhost:8001' );
 
 // More strict version of parseInt() (kinda stolen from mozilla web docs)
@@ -28,7 +28,23 @@ ws.addEventListener( 'message', input => {
   input = input.data;
 
   // Split at spaces NOT preceded by a hyphen
-  let data = input.split( /(?<!-) /g );
+  // Can't use regex for this since some browser's don't support lookbehind
+  // Why this is the case is completely beyond me
+  let prev_char = '';
+  let prev_split = 0;
+  let data = [];
+  for ( let i = 0; i < input.length; i ++ ) {
+
+    if ( prev_char != '-' && input[i] == ' ' ) {
+      data.push( input.substring( prev_split, i ) );
+      prev_split = i + 1;
+    }
+    prev_char = input[i];
+
+  }
+  data.push( input.substring( prev_split ) );
+
+  // data = input.split( /(?<!-) /g );
 
   // Replace '- ' with ' ' and '--' with '-'
   for ( let i = 0; i < data.length; i ++ )
