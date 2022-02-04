@@ -145,7 +145,6 @@ textarea:focus {
 <script>
 
 const MODES = [ 'console', 'keyboard', 'cursor', 'click', 'drag' ];
-const REFRESH_INTERVAL = 1000;
 g_mode = 0;
 g_debug_suffix = '';
 g_is_touchscreen = false;
@@ -177,9 +176,8 @@ function load() {
       }
   } );
 
-  // Continually reload the image
-  setInterval( () => { if ( g_password != 'none' )
-    send( `link ${ g_password } image fetch` ); }, REFRESH_INTERVAL )
+  // Initially refresh the image (this function will repeatedly call itself)
+  setTimeout( image_fetch, 1000 );
 
   // Allow the image to send a command when clicked on
   // This only applies when in 'cursor', 'click', or 'drag' mode
@@ -283,23 +281,42 @@ function submit_cmd() {
 // Actually sends a command over the socket
 function send_cmd( cmd_body ) {
 
-  send( [ 'link', g_password, 'command', 'push', cmd_body ] )
+  send( [ 'link', g_password, 'command', 'push', cmd_body ] );
+
+}
+
+// Reload the image
+// Will be called again when the socket receives image data
+function image_fetch() {
+
+  send( `link ${ g_password } image fetch` );
+  console.log( 'Fetched image!' );
+
 }
 
 // Update the image using a byte string
 function image_set( data ) {
 
+  // Show a special image if there's no data in the buffer
+  if ( data.image_data == '' ) {
+    document.getElementById( 'main_img' ).src = 'screen_inactive.png';
+  }
+
+  // Show a special image if password is incorrect
+  else if ( data.image_data == 'PASSWORD_ERROR' ) {
+    document.getElementById( 'main_img' ).src = 'screen_password.png';
+  }
+
   // Convert data.image_data from string to bytearray
   // Requires taking it out of the b''
-  if ( data.image_data != '' ) {
+  else {
     data.image_data = data.image_data.substring( 2, data.image_data.length - 1 );
     document.getElementById( 'main_img' ).src = 'data:image/png;base64,' + data.image_data;
   }
 
-  // Show a special image if there's no data in the buffer
-  else {
-    document.getElementById( 'main_img' ).src = 'screen_inactive.png';
-  }
+  // Resend image request
+  console.log( data );
+  setTimeout( image_fetch, 500 );
 
 }
 

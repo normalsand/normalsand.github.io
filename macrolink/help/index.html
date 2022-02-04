@@ -1,0 +1,54 @@
+<p style = 'white-space: pre'></p>
+
+<script>
+  document.querySelector( 'p' ).innerText = `COMMAND LIST:
+s <time (ms)>
+  Waits a certain amount of time before performing the next command
+k <string>
+  Types out the inputted string
+  Use _ for spaces and __ for underscores
+kh <key code> <time (ms)>
+  Holds a key down
+kc <key,key,key,key...>
+  Presses multiple hotkeys down simultaneously
+  Use "cm" for actual commas
+cs <x> <y>
+  Moves the mouse (x, y) pixels relative to its current position
+cm <x> <y>
+  Sets the mouse to (x, y) relative to the top-left of the screen
+c1 [times]
+c2 [times]
+c3 [times]
+mw <u/d> <times>
+  Scrolls up/down a certain number of times
+z <i/o> <times>
+  Zooms in/out by a certain factor
+d <x> <y> <x'> <y'> [right/middle]
+  Drags the mouse from position a to position b
+  Allows the usage of right/middle button
+  Clicks a mouse button a certain number of times
+exe <-1>
+exe <0>
+exe <index>
+  Opens/closes a program
+  -1 closes the current program
+  0 focuses on the desktop
+  Any other number opens program #n from the taskbar
+
+'v' = enter
+'#' = lwin
+'!' = lalt
+'+' = lshift
+'^' = lcontrol
+'r!' = ralt
+'r+' = rshift
+'r^' = rcontrol
+'%' = esc
+'cm' = ,
+'>' = tab
+'<' = backspace
+'x' = delete
+'*' = insert
+
+`;
+</script>
