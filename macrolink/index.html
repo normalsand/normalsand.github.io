@@ -68,6 +68,7 @@ textarea:focus {
 
 #macrolink_icon {
   margin-top: 80px;
+  transition: opacity 0.6s;
 }
 
 #debug_text {
@@ -141,7 +142,16 @@ textarea:focus {
 <textarea class = center type = text id = cmd_input rows = 5 cols = 50 autocomplete = off style = 'margin-top: 25px;'></textarea>
 <div id = keyboard class = center style = 'margin-top: 25px'></div>
 
+<script>
+
+function on_connect_function () {
+  image_fetch();
+}
+
+</script>
+
 <script src = '/external_test.js' type = 'text/javascript'></script>
+
 <script>
 
 const MODES = [ 'console', 'keyboard', 'cursor', 'click', 'drag' ];
@@ -175,9 +185,6 @@ function load() {
           e.preventDefault();
       }
   } );
-
-  // Initially refresh the image (this function will repeatedly call itself)
-  setTimeout( image_fetch, 1000 );
 
   // Allow the image to send a command when clicked on
   // This only applies when in 'cursor', 'click', or 'drag' mode
@@ -226,13 +233,17 @@ function css_var( var_name ) {
 const COMMANDS = setup_commands( [
   'log *str',
   'error *str',
-  'image set *image_data'
+  'image set *image_data',
+  'clipboard set *str',
+  'NULL'
 ] );
 
 const COMMAND_FUNCTIONS = [
   log_info,
   server_error,
-  image_set
+  image_set,
+  clipboard_set,
+  function () {}
 ];
 
 // Command functions
@@ -242,6 +253,8 @@ function log_info( data )
 
 function server_error( data )
   { console.error( `Server error:\n${ data.str }` ); }
+
+function clipboard_set( data ) { window.navigator.clipboard.writeText( data.str.replace( /\\n/g, '\n' ) ); }
 
 // Mode determines what should be visible and how click actions affect the image
 function set_mode( index ) {
@@ -272,6 +285,15 @@ function submit_cmd() {
 
     if ( cmd.substring( 0, 13 ) == 'use password ' )
       g_password = cmd.substring( 13 )
+
+    else if ( cmd == 'hide text' )
+      document.getElementById( 'macrolink_icon' ).style.opacity = '0%';
+
+    else if ( cmd == 'show text' )
+      document.getElementById( 'macrolink_icon' ).style.opacity = '100%';
+
+    else if ( cmd == 'cb get' )
+      send( [ 'link', g_password, 'clipboard', 'get' ] )
     
     else
       send_cmd( cmd );
@@ -290,7 +312,6 @@ function send_cmd( cmd_body ) {
 function image_fetch() {
 
   send( `link ${ g_password } image fetch` );
-  console.log( 'Fetched image!' );
 
 }
 
@@ -315,8 +336,7 @@ function image_set( data ) {
   }
 
   // Resend image request
-  console.log( data );
-  setTimeout( image_fetch, 500 );
+  setTimeout( image_fetch );
 
 }
 
