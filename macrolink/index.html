@@ -254,7 +254,12 @@ function log_info( data )
 function server_error( data )
   { console.error( `Server error:\n${ data.str }` ); }
 
-function clipboard_set( data ) { window.navigator.clipboard.writeText( data.str.replace( /\\n/g, '\n' ) ); }
+function clipboard_set( data ) {
+  
+  window.navigator.clipboard.writeText( data.str.replace( /\\n/g, '\n' ) );
+  document.getElementById( 'cmd_input' ).value = data.str.replace( /\\n/g, '\n' );
+
+}
 
 // Mode determines what should be visible and how click actions affect the image
 function set_mode( index ) {
