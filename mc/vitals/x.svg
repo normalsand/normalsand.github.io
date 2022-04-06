@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg height="250" width="250">
+    <line x1="25" y1="25" x2="225" y2="225" style="stroke:CUSTOM_COLOR; stroke-width:45" />
+    <line x1="25" y1="225" x2="225" y2="25" style="stroke:CUSTOM_COLOR; stroke-width:45" />
+</svg>
